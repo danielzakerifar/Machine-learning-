@@ -1,0 +1,200 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+get_ipython().magic('matplotlib inline')
+import seaborn as sns
+from sklearn.model_selection import cross_val_score
+from mlxtend.plotting import plot_decision_regions
+import matplotlib.gridspec as gridspec
+import itertools
+delta = pd.read_csv('Admission_Predict.csv')
+#print(delta.describe())
+#delta_names = delta.loc[:,'GRE Score']
+#print(delta_names)
+#delta.head()
+delta.shape
+
+corr = delta.corr()
+mask = np.zeros_like(corr, dtype=np.bool)
+mask[np.triu_indices_from(mask)] = True
+f, ax = plt.subplots(figsize=(11, 9))
+
+# Generate a custom diverging colormap
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
+
+# Draw the heatmap with the mask and correct aspect ratio
+sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0,
+            square=True, linewidths=.5, cbar_kws={"shrink": .5})
+
+#delta_imp = delta[['GRE Score','TOEFL Score','University Rating','SOP','LOR','CGPA','Research']]
+
+delta_imp = delta[['GRE Score','TOEFL Score','University Rating','SOP','LOR ', 'CGPA','Research','Chance of Admit ' ]]
+
+sns.pairplot(delta_imp)
+
+from sklearn.decomposition import PCA
+from sklearn import preprocessing
+from sklearn.preprocessing import MinMaxScaler
+delta_noname = delta.iloc[:,1:]
+delta_noname.head()
+
+col_names = list(delta_noname.columns.values)
+print(col_names)
+#scaler = MinMaxScaler(feature_range=(0, 1), copy=True)
+#scaler.fit(delta_noname)
+#delta_scaled = scaler.transform(delta_noname)
+#delta_scaled = preprocessing.scale(delta_noname)
+delta_noname.head
+pca = PCA(n_components=4)
+pca.fit(delta_noname)
+delta_noname_components = pca.transform(delta_noname)
+#converting to dataframe
+delta_noname_components_df = pd.DataFrame(delta_noname_components, columns=['PC1','PC2','PC3','PC4'] )
+
+print(delta_noname_components_df)
+
+var= pca.explained_variance_ratio_
+var1=np.cumsum(np.round(pca.explained_variance_ratio_, decimals=4)*100)
+print(var)
+plt.plot(var1)
+from sklearn.cluster import KMeans
+num_clusters = 4
+km = KMeans(n_clusters=num_clusters)
+%time km.fit(delta_noname)
+clusters = km.labels_.tolist()
+delta_names_list = pd.Series.tolist(delta_names)
+import pandas as pd
+#aircrafts = { 'GRE Score': delta_names, 'cluster': clusters }
+gre = { 'GRE Score': delta_names_list, 'cluster': clusters }
+frame = pd.DataFrame(gre, index = [clusters] , columns = ['GRE Score','cluster'])
+frame.shape
+frame['cluster'].value_counts()
+result = frame.groupby(by=clusters)
+#to print clusters
+for key, item in result:
+    print( result.get_group(key), "\n\n")
+    #to plot the clusters
+y1 = km.fit_predict(delta_noname_components)
+plt.figure(figsize=(8, 8), dpi=80)
+plt.title('First 2 principal components after Linear PCA and 4 Clusters')
+plt.scatter(delta_noname_components[:,0],delta_noname_components[:,1],c=y1)
+cluster_colors = {0: '#1b9e77', 1: '#d95f02', 2: '#7570b3', 3: '#e7298a'}
+
+#set up cluster names using a dict
+cluster_names = {0: 'first', 
+                 1: 'Second', 
+                 2: 'Third', 
+                 3: 'Forth',
+                }
+delta_noname_components.shape
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+# To getter a better understanding of interaction of the dimensions
+# plot the first three PCA dimensions
+fig = plt.figure(1, figsize=(8, 6))
+ax = Axes3D(fig, elev=-150, azim=110)
+ax.scatter(delta_noname_components[:, 0], delta_noname_components[:, 1], delta_noname_components[:, 2],cmap=plt.cm.Paired)
+titel="First three directions in PCA"
+ax.set_title(titel)
+ax.set_xlabel("1st eigenvector")
+ax.set_ylabel("2nd eigenvector")
+ax.set_zlabel("3rd eigenvector")
+
+plt.show()
+#Elbow mwthod to choose the optimal number of K for clusteringp
+import numpy
+from sklearn.cluster import KMeans
+from sklearn import metrics
+from scipy.spatial.distance import cdist
+
+distortion = []
+K = range(1,10)
+for k in K:
+    kmeans = KMeans(n_clusters = k).fit(delta_noname)
+    kmeans.fit(delta_noname)
+    distortion.append(sum(numpy.min(cdist(delta_noname, kmeans.cluster_centers_, 'euclidean'), axis=1)) / delta_noname.shape[0])
+    
+plt.plot(K, distortion, 'bx-')
+plt.title('The Elbow Method showing the optimal k')
+#to get the variance being explained by the components
+import numpy
+explained_variance = numpy.var(delta_noname_components_rbf, axis=0)
+explained_variance_ratio = explained_variance / numpy.sum(explained_variance)
+print(explained_variance_ratio)
+
+delta_noname_components_rbf.shape
+delta_noname_components_df_rbf = pd.DataFrame(delta_noname_components_rbf, columns=['RBF-PC1','RBF-PC2','RBF-PC3','RBF-PC4'] )
+from sklearn.cluster import KMeans
+num_clusters = 4
+km = KMeans(n_clusters=num_clusters)
+y1 = km.fit_predict(delta_noname_components_rbf)
+plt.figure(figsize=(8, 8), dpi=80)
+plt.title('First 2 principal components after Linear PCA and 4 Clusters')
+plt.scatter(delta_noname_components_rbf[:,0],delta_noname_components_rbf[:,1],c=y1)
+clusters = km.labels_.tolist()
+import pandas as pd
+#aircrafts = { 'Aircraft': delta_names, 'cluster': clusters }
+gre = { 'GRE Score': delta_names_list, 'cluster': clusters }
+frame_rbf = pd.DataFrame(gre, index = [clusters] , columns = ['GRE Score','cluster'])
+frame_rbf['cluster'].value_counts()
+result_rbf = frame_rbf.groupby(by=clusters)
+#to print clusters
+for key, item in result_rbf:
+    print( result_rbf.get_group(key), "\n\n")
+    import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+# To getter a better understanding of interaction of the dimensions
+# plot the first three PCA dimensions
+fig = plt.figure(1, figsize=(8, 6))
+ax = Axes3D(fig, elev=-150, azim=110)
+ax.scatter(delta_noname_components_rbf[:, 0], delta_noname_components_rbf[:, 1], delta_noname_components_rbf[:, 2],cmap=plt.cm.Paired)
+titel="First three directions in PCA"
+ax.set_title(titel)
+ax.set_xlabel("1st eigenvector")
+ax.set_ylabel("2nd eigenvector")
+ax.set_zlabel("3rd eigenvector")
+
+plt.show()
+#Polynomial Kernel with degree 2
+from sklearn.cluster import KMeans
+num_clusters = 4
+km = KMeans(n_clusters=num_clusters)
+kpca_poly = KernelPCA(kernel="poly", gamma=10,n_components=4, degree = 2)
+kpca_poly.fit(delta_noname)
+delta_noname_components_poly = kpca_poly.transform(delta_noname)
+
+delta_noname_components_poly.shape
+delta_noname_components_df_poly = pd.DataFrame(delta_noname_components_poly, columns=['POLY-PC1','POLY-PC2','POLY-PC3','POLY-PC4'])
+y1 = km.fit_predict(delta_noname_components_poly)
+plt.figure(figsize=(8, 8), dpi=80)
+plt.title('First 2 principal components after Linear PCA and 4 Clusters')
+plt.scatter(delta_noname_components_poly[:,0],delta_noname_components_poly[:,1],c=y1)
+
+clusters = km.labels_.tolist()
+import pandas as pd
+
+#aircrafts = { 'Aircraft': delta_names, 'cluster': clusters }
+gre = { 'GRE Score': delta_names_list, 'cluster': clusters }
+frame_poly = pd.DataFrame(gre, index = [clusters] , columns = ['GRE Score','cluster'])
+frame_poly['cluster'].value_counts()
+
+result_poly = frame_poly.groupby(by=clusters)
+#to print clusters
+for key, item in result_poly:
+    print( result_poly.get_group(key), "\n\n")
+    import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+cluster_col = {'#1b9e77', '#d95f02', '#7570b3', '#e7298a'}
+# To getter a better understanding of interaction of the dimensions
+# plot the first three PCA dimensions
+fig = plt.figure(1, figsize=(8, 6))
+ax = Axes3D(fig, elev=-150, azim=110)
+ax.scatter(delta_noname_components_poly[:, 0], delta_noname_components_poly[:, 1], delta_noname_components_poly[:, 2],cmap=plt.cm.Paired)
+titel="First three directions in PCA"
+ax.set_title(titel)
+ax.set_xlabel("1st eigenvector")
+ax.set_ylabel("2nd eigenvector")
+ax.set_zlabel("3rd eigenvector")
+
+plt.show()
